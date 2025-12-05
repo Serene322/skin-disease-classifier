@@ -16,7 +16,7 @@ MODEL_DIR = "model_files"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 # Поменяй на ID твоего загруженного ZIP или .h5 в Google Drive
-GDRIVE_FILE_ID = "1UNb3jzg1ez9lB5MljHxnFuYsHTAGPgGp"
+GDRIVE_FILE_ID = "1H_oLka9VEo6a0A1Kvi56Ye7k5xqnjneC"
 
 # локальные имена
 ZIP_TARGET = os.path.join(MODEL_DIR, "model_download.zip")   # куда загрузим zip
