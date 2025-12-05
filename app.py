@@ -5,33 +5,34 @@ from PIL import Image
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.applications.efficientnet_v2 import preprocess_input
-import os, zipfile
-import streamlit as st
+import os
+import gdown
 from tensorflow import keras
+import streamlit as st
 
+# Папка для хранения модели
 MODEL_DIR = "model_files"
-MODEL_FOLDER = os.path.join(MODEL_DIR, "efficientnetv2.keras")  # или путь до распакованной папки
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+# Google Drive FILE_ID вашей модели
 GDRIVE_FILE_ID = "1UNb3jzg1ez9lB5MljHxnFuYsHTAGPgGp"
 
+# Путь к локальному файлу модели
+MODEL_PATH = os.path.join(MODEL_DIR, "efficientnetv2.keras")
+
+# Кэширование модели, чтобы не скачивать при каждом cold start
 @st.cache_resource
 def ensure_model():
-    if not os.path.exists(MODEL_FOLDER):
-        os.makedirs(MODEL_DIR, exist_ok=True)
-        try:
-            import gdown
-        except Exception:
-            os.system("pip install gdown -q")
-            import gdown
-        target = os.path.join(MODEL_DIR, "model.zip")
+    if not os.path.exists(MODEL_PATH):
         url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
-        gdown.download(url, target, quiet=False)
-        with zipfile.ZipFile(target, 'r') as z:
-            z.extractall(MODEL_DIR)
-        os.remove(target)
-    model = keras.models.load_model(MODEL_FOLDER, compile=False)
+        st.info("Скачиваю модель с Google Drive...")
+        gdown.download(url, MODEL_PATH, quiet=False)
+    model = keras.models.load_model(MODEL_PATH, compile=False)
     return model
 
+# Загружаем модель
 model = ensure_model()
+st.success("Модель загружена!")
 
 
 # ========== ПАРАМЕТРЫ ==========
