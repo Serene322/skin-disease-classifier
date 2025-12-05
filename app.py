@@ -10,27 +10,20 @@ import gdown
 from tensorflow import keras
 import streamlit as st
 
-# Папка для хранения модели
 MODEL_DIR = "model_files"
 os.makedirs(MODEL_DIR, exist_ok=True)
-
-# Google Drive FILE_ID вашей модели
+MODEL_PATH = os.path.join(MODEL_DIR, "efficientnetv2.keras")
 GDRIVE_FILE_ID = "1UNb3jzg1ez9lB5MljHxnFuYsHTAGPgGp"
 
-# Путь к локальному файлу модели
-MODEL_PATH = os.path.join(MODEL_DIR, "efficientnetv2.keras")
-
-# Кэширование модели, чтобы не скачивать при каждом cold start
 @st.cache_resource
 def ensure_model():
     if not os.path.exists(MODEL_PATH):
-        url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
         st.info("Скачиваю модель с Google Drive...")
+        url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
         gdown.download(url, MODEL_PATH, quiet=False)
     model = keras.models.load_model(MODEL_PATH, compile=False)
     return model
 
-# Загружаем модель
 model = ensure_model()
 st.success("Модель загружена!")
 
