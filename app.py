@@ -5,116 +5,56 @@ from PIL import Image
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.applications.efficientnet_v2 import preprocess_input
-# robust_model_loader.py — вставь этот фрагмент в начало app.py (заменив старую ensure_model)
 import os
 import gdown
 import zipfile
 import streamlit as st
 from tensorflow import keras
 
+# --- Настройки ---
 MODEL_DIR = "model_files"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-# Поменяй на ID твоего загруженного ZIP или .h5 в Google Drive
-GDRIVE_FILE_ID = "1H_oLka9VEo6a0A1Kvi56Ye7k5xqnjneC"
+GDRIVE_FILE_ID = "1H_oLka9VEo6a0A1Kvi56Ye7k5xqnjneC"  # новый ZIP файл
+ZIP_TARGET = os.path.join(MODEL_DIR, "efficientnetv2.keras.zip")
+EXTRACTED_DIR = os.path.join(MODEL_DIR, "efficientnetv2.keras")  # куда распакуем модель
 
-# локальные имена
-ZIP_TARGET = os.path.join(MODEL_DIR, "model_download.zip")   # куда загрузим zip
-H5_TARGET = os.path.join(MODEL_DIR, "model.h5")              # если у тебя .h5
-EXTRACTED_DIR = os.path.join(MODEL_DIR, "efficientnetv2.keras")  # куда распакуем .keras folder
-
+# --- Функция загрузки модели ---
 @st.cache_resource
 def ensure_model():
-    # Если уже распаковано/есть папка .keras -> загружаем
+    # Если уже распаковано — просто загружаем
     if os.path.isdir(EXTRACTED_DIR):
         st.write("Модель уже распакована локально.")
         return keras.models.load_model(EXTRACTED_DIR, compile=False)
+    # Если ZIP ещё не скачан — скачиваем
+    if not os.path.exists(ZIP_TARGET):
+        st.info("Скачиваю модель с Google Drive...")
+        url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
+        ret = gdown.download(url, ZIP_TARGET, quiet=False)
+        if not ret or not os.path.exists(ZIP_TARGET):
+            raise FileNotFoundError("Не удалось скачать ZIP файл модели с Google Drive. Проверь права доступа (Anyone with link).")
 
-    # Если есть один файл .h5 — загрузить и вернуть
-    if os.path.exists(H5_TARGET):
-        st.write("Найден local .h5 — загружаю...")
-        return keras.models.load_model(H5_TARGET, compile=False)
+    # Распаковываем ZIP
+    st.info("Распаковываю модель...")
+    with zipfile.ZipFile(ZIP_TARGET, 'r') as z:
+        z.extractall(MODEL_DIR)
 
-    # Если zip уже скачан — распаковать
-    if os.path.exists(ZIP_TARGET):
-        st.write(f"ZIP уже скачан: {ZIP_TARGET}, распаковываю...")
-        try:
-            with zipfile.ZipFile(ZIP_TARGET, 'r') as z:
-                z.extractall(MODEL_DIR)
-            st.write("Распаковка завершена.")
-            # после распаковки ожидаем папку EXTRACTED_DIR или .keras внутри MODEL_DIR
-            if os.path.isdir(EXTRACTED_DIR):
-                return keras.models.load_model(EXTRACTED_DIR, compile=False)
-            # иногда zip может содержать папку с другим именем — ищем .keras папку
-            for name in os.listdir(MODEL_DIR):
-                p = os.path.join(MODEL_DIR, name)
-                if os.path.isdir(p) and name.endswith(".keras"):
-                    return keras.models.load_model(p, compile=False)
-            raise FileNotFoundError("Не нашёл распакованную .keras папку после unzip.")
-        except zipfile.BadZipFile:
-            os.remove(ZIP_TARGET)
-            st.warning("ZIP файл поврежден — удалён. Попробую скачать заново.")
-
-    # Если ничего нет — скачиваем с Google Drive
-    st.info("Скачиваю модель с Google Drive (проверь, что файл публичен и это ZIP или .h5)...")
-    url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
-    out = ZIP_TARGET  # попытка скачать zip (или файл .h5, если он там)
-    # gdown возвращает путь при успехе, None при провале
-    try:
-        ret = gdown.download(url, out, quiet=False)
-    except Exception as e:
-        st.error(f"gdown.download выбросил исключение: {e}")
-        raise
-
-    if not ret or not os.path.exists(out):
-        # попробуем альтернативный URL с export=download
-        alt_url = f"https://drive.google.com/uc?export=download&id={GDRIVE_FILE_ID}"
-        st.write("Первичная загрузка не удалась, пробую альтернативный URL...")
-        try:
-            ret2 = gdown.download(alt_url, out, quiet=False)
-        except Exception as e:
-            st.error(f"Вторичная загрузка упала: {e}")
-            raise
-        if not ret2 or not os.path.exists(out):
-            raise FileNotFoundError(
-                "Не удалось скачать файл с Google Drive. Проверьте права доступа (Anyone with the link) "
-                "и то, что вы загрузили не папку. Можно также попробовать загрузить ZIP или .h5."
-            )
-
-    # Если скачали — проверим расширение: zip -> распаковать; .h5 -> загрузить сразу
-    if zipfile.is_zipfile(out):
-        st.write("Файл — zip, распаковываю...")
-        with zipfile.ZipFile(out, 'r') as z:
-            z.extractall(MODEL_DIR)
-        os.remove(out)
-        # ищем распакованную .keras папку или любой .keras каталог
+    if not os.path.isdir(EXTRACTED_DIR):
+        # Иногда в ZIP папка может называться по-другому
+        # ищем любую папку с окончанием .keras
         for name in os.listdir(MODEL_DIR):
             p = os.path.join(MODEL_DIR, name)
             if os.path.isdir(p) and name.endswith(".keras"):
-                st.write(f"Найдена распакованная модель: {p}")
                 return keras.models.load_model(p, compile=False)
-        # иначе пробуем найти .h5 внутри
-        for root, dirs, files in os.walk(MODEL_DIR):
-            for f in files:
-                if f.endswith(".h5"):
-                    return keras.models.load_model(os.path.join(root, f), compile=False)
-        raise FileNotFoundError("После распаковки zip не найдено .keras папки или .h5 файла.")
-    else:
-        # не zip — возможно скачан единый .h5 или .keras (но если .keras не zip — Keras ожидает zip)
-        # переименуем в model.h5 и попытемся загрузить
-        st.write("Файл не zip. Проверяю, возможно это .h5...")
-        if os.path.exists(out):
-            # если имя заканчивается на .h5 — используем его
-            if out.endswith(".h5") or out.endswith(".hdf5"):
-                return keras.models.load_model(out, compile=False)
-            # пробуем загрузить как .keras (keras ожидает .keras быть zip). если не получится — сообщим.
-            try:
-                return keras.models.load_model(out, compile=False)
-            except Exception as e:
-                raise RuntimeError(f"Скачан файл, но Keras не может его прочитать: {e}")
+        raise FileNotFoundError("После распаковки ZIP не найдена папка с моделью .keras")
+    
+    # Загружаем модель
+    return keras.models.load_model(EXTRACTED_DIR, compile=False)
 
-    # в общем случае
-    raise RuntimeError("Не удалось подготовить модель.")
+# --- Загружаем модель ---
+model = ensure_model()
+st.success("Модель загружена!")
+
 
 
 
