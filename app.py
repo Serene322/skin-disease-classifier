@@ -8,6 +8,7 @@ from huggingface_hub import hf_hub_download
 from tensorflow import keras
 from tensorflow.keras.applications.efficientnet_v2 import preprocess_input
 
+
 # ========== Настройки ==========
 MODEL_DIR = "model_files"
 os.makedirs(MODEL_DIR, exist_ok=True)
@@ -56,9 +57,13 @@ st.write("Загрузите фото — модель выдаст топ‑3 �
 # === Загрузка и подготовка модели ===
 @st.cache_resource
 def ensure_model():
-    if os.path.isdir(EXTRACTED_DIR):
-        return keras.models.load_model(EXTRACTED_DIR, compile=False)
+    # Сначала ищем уже распакованную модель
+    for name in os.listdir(MODEL_DIR):
+        p = os.path.join(MODEL_DIR, name)
+        if os.path.isdir(p) and os.path.exists(os.path.join(p, "keras_metadata.pb")):
+            return keras.models.load_model(p, compile=False)
 
+    # Скачиваем ZIP с HF Hub
     st.info("Скачиваю модель с Hugging Face Hub...")
     zip_path = hf_hub_download(
         repo_id=REPO_ID,
@@ -71,22 +76,14 @@ def ensure_model():
     with zipfile.ZipFile(zip_path, 'r') as z:
         z.extractall(MODEL_DIR)
 
-    if not os.path.isdir(EXTRACTED_DIR):
-        # fallback: ищем папку с .keras
-        for name in os.listdir(MODEL_DIR):
-            p = os.path.join(MODEL_DIR, name)
-            if os.path.isdir(p) and name.endswith(".keras"):
-                return keras.models.load_model(p, compile=False)
-        raise FileNotFoundError("После распаковки ZIP не найдена папка с моделью .keras")
+    # Ищем папку с .keras (любой папкой с файлом keras_metadata.pb)
+    for name in os.listdir(MODEL_DIR):
+        p = os.path.join(MODEL_DIR, name)
+        if os.path.isdir(p) and os.path.exists(os.path.join(p, "keras_metadata.pb")):
+            return keras.models.load_model(p, compile=False)
 
-    return keras.models.load_model(EXTRACTED_DIR, compile=False)
+    raise FileNotFoundError("После распаковки ZIP не найдена папка с моделью .keras")
 
-try:
-    model = ensure_model()
-    st.success("Модель загружена!")
-except Exception as e:
-    st.error(f"Не удалось загрузить модель: {e}")
-    st.stop()
 
 # === Ресемплер для Pillow ===
 try:
