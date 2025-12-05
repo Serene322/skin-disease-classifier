@@ -13,7 +13,7 @@ MODEL_DIR = "model_files"
 os.makedirs(MODEL_DIR, exist_ok=True)
 EXTRACTED_DIR = os.path.join(MODEL_DIR, "efficientnetv2.keras")
 
-REPO_ID = "username/dataset"  # замените на ваш репо Hugging Face
+REPO_ID = "SereneYiver/skin-disease-classifier"  # замените на ваш репо Hugging Face
 FILENAME = "efficientnetv2.keras.zip"
 HF_TOKEN = "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"
 
