@@ -57,12 +57,6 @@ st.write("Загрузите фото — модель выдаст топ‑3 �
 # === Загрузка и подготовка модели ===
 @st.cache_resource
 def ensure_model():
-    # Сначала ищем уже распакованную модель
-    for name in os.listdir(MODEL_DIR):
-        p = os.path.join(MODEL_DIR, name)
-        if os.path.isdir(p) and os.path.exists(os.path.join(p, "keras_metadata.pb")):
-            return keras.models.load_model(p, compile=False)
-
     # Скачиваем ZIP с HF Hub
     st.info("Скачиваю модель с Hugging Face Hub...")
     zip_path = hf_hub_download(
@@ -72,17 +66,29 @@ def ensure_model():
         cache_dir=MODEL_DIR
     )
 
+    # Создаём папку для распаковки
+    extract_dir = os.path.join(MODEL_DIR, "efficientnetv2")
+    os.makedirs(extract_dir, exist_ok=True)
+
+    # Распаковываем ZIP
     st.info("Распаковываю модель...")
     with zipfile.ZipFile(zip_path, 'r') as z:
-        z.extractall(MODEL_DIR)
+        z.extractall(extract_dir)
 
-    # Ищем папку с .keras (любой папкой с файлом keras_metadata.pb)
-    for name in os.listdir(MODEL_DIR):
-        p = os.path.join(MODEL_DIR, name)
+    # После распаковки ищем папку с keras_metadata.pb
+    for name in os.listdir(extract_dir):
+        p = os.path.join(extract_dir, name)
         if os.path.isdir(p) and os.path.exists(os.path.join(p, "keras_metadata.pb")):
+            st.success(f"Модель найдена в {p}")
             return keras.models.load_model(p, compile=False)
 
+    # fallback: если распакованы напрямую файлы модели
+    if os.path.exists(os.path.join(extract_dir, "keras_metadata.pb")):
+        st.success(f"Модель найдена в {extract_dir}")
+        return keras.models.load_model(extract_dir, compile=False)
+
     raise FileNotFoundError("После распаковки ZIP не найдена папка с моделью .keras")
+
 
 
 # === Ресемплер для Pillow ===
