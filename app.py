@@ -3,19 +3,16 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import os
-import zipfile
 from huggingface_hub import hf_hub_download
 from tensorflow import keras
 from tensorflow.keras.applications.efficientnet_v2 import preprocess_input
 
-
 # ========== Настройки ==========
 MODEL_DIR = "model_files"
 os.makedirs(MODEL_DIR, exist_ok=True)
-EXTRACTED_DIR = os.path.join(MODEL_DIR, "efficientnetv2.keras")
 
-REPO_ID = "SereneYiver/skin-disease-classifier"  # замените на ваш репо Hugging Face
-FILENAME = "efficientnetv2.keras.zip"
+REPO_ID = "SereneYiver/skin-disease-classifier"  # твой репозиторий на HF
+FILENAME = "efficientnetv2.keras"  # прямо .keras, НЕ ZIP
 HF_TOKEN = "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"
 
 IMG_SIZE = (224, 224)
@@ -54,42 +51,25 @@ st.set_page_config(page_title="Skin Disease Classifier", layout="centered")
 st.title("Классификатор кожных заболеваний")
 st.write("Загрузите фото — модель выдаст топ‑3 вероятных диагноза с процентами.")
 
-# === Загрузка и подготовка модели ===
+# === Загрузка модели ===
 @st.cache_resource
 def ensure_model():
-    # Скачиваем ZIP с HF Hub
-    st.info("Скачиваю модель с Hugging Face Hub...")
-    zip_path = hf_hub_download(
+    # Скачиваем .keras напрямую
+    model_path = hf_hub_download(
         repo_id=REPO_ID,
         filename=FILENAME,
         token=HF_TOKEN,
         cache_dir=MODEL_DIR
     )
+    st.info(f"Модель загружена из {model_path}")
+    return keras.models.load_model(model_path, compile=False)
 
-    # Создаём папку для распаковки
-    extract_dir = os.path.join(MODEL_DIR, "efficientnetv2")
-    os.makedirs(extract_dir, exist_ok=True)
-
-    # Распаковываем ZIP
-    st.info("Распаковываю модель...")
-    with zipfile.ZipFile(zip_path, 'r') as z:
-        z.extractall(extract_dir)
-
-    # После распаковки ищем папку с keras_metadata.pb
-    for name in os.listdir(extract_dir):
-        p = os.path.join(extract_dir, name)
-        if os.path.isdir(p) and os.path.exists(os.path.join(p, "keras_metadata.pb")):
-            st.success(f"Модель найдена в {p}")
-            return keras.models.load_model(p, compile=False)
-
-    # fallback: если распакованы напрямую файлы модели
-    if os.path.exists(os.path.join(extract_dir, "keras_metadata.pb")):
-        st.success(f"Модель найдена в {extract_dir}")
-        return keras.models.load_model(extract_dir, compile=False)
-
-    raise FileNotFoundError("После распаковки ZIP не найдена папка с моделью .keras")
-
-
+try:
+    model = ensure_model()
+    st.success("Модель загружена!")
+except Exception as e:
+    st.error(f"Не удалось загрузить модель: {e}")
+    st.stop()
 
 # === Ресемплер для Pillow ===
 try:
@@ -147,3 +127,4 @@ if uploaded_file is not None:
         st.info("Если хотите проверить другое фото — загрузите новый файл выше.")
 else:
     st.write("Нажмите кнопку «Загрузить фото», чтобы выбрать изображение из галереи.")
+
