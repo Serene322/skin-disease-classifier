@@ -11,14 +11,13 @@ from tensorflow.keras.applications.efficientnet_v2 import preprocess_input
 MODEL_DIR = "model_files"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-REPO_ID = "SereneYiver/skin-disease-classifier"  # твой репозиторий на HF
-FILENAME = "efficientnetv2.keras"  # прямо .keras, НЕ ZIP
-HF_TOKEN = "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"
+REPO_ID = "SereneYiver/skin-disease-classifier"  # публичный репо
+FILENAME = "efficientnetv2.keras"  # прямо .keras
 
 IMG_SIZE = (224, 224)
 IMAGE_DISPLAY_WIDTH = 400
 
-# Классы и перевод
+# Классы
 CLASS_NAMES = [
     "Melanocytic Nevi (NV)",
     "Basal Cell Carcinoma (BCC)",
@@ -54,11 +53,10 @@ st.write("Загрузите фото — модель выдаст топ‑3 �
 # === Загрузка модели ===
 @st.cache_resource
 def ensure_model():
-    # Скачиваем .keras напрямую
+    # Скачиваем .keras напрямую (публичный репо, токен не нужен)
     model_path = hf_hub_download(
         repo_id=REPO_ID,
         filename=FILENAME,
-        token=HF_TOKEN,
         cache_dir=MODEL_DIR
     )
     st.info(f"Модель загружена из {model_path}")
@@ -127,4 +125,5 @@ if uploaded_file is not None:
         st.info("Если хотите проверить другое фото — загрузите новый файл выше.")
 else:
     st.write("Нажмите кнопку «Загрузить фото», чтобы выбрать изображение из галереи.")
+
 
