@@ -15,7 +15,7 @@ EXTRACTED_DIR = os.path.join(MODEL_DIR, "efficientnetv2.keras")
 
 REPO_ID = "username/dataset"  # замените на ваш репо Hugging Face
 FILENAME = "efficientnetv2.keras.zip"
-HF_TOKEN = "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"
+HF_TOKEN = "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"
 
 IMG_SIZE = (224, 224)
 IMAGE_DISPLAY_WIDTH = 400
