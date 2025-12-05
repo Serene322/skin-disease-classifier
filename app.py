@@ -15,17 +15,17 @@ from tensorflow import keras
 MODEL_DIR = "model_files"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-GDRIVE_FILE_ID = "1H_oLka9VEo6a0A1Kvi56Ye7k5xqnjneC"  # новый ZIP файл
+GDRIVE_FILE_ID = "1UNb3jzg1ez9lB5MljHxnFuYsHTAGPgGp"  # ZIP-файл
 ZIP_TARGET = os.path.join(MODEL_DIR, "efficientnetv2.keras.zip")
 EXTRACTED_DIR = os.path.join(MODEL_DIR, "efficientnetv2.keras")  # куда распакуем модель
 
 # --- Функция загрузки модели ---
 @st.cache_resource
 def ensure_model():
-    # Если уже распаковано — просто загружаем
+    # Проверяем, есть ли уже распакованная модель
     if os.path.isdir(EXTRACTED_DIR):
-        st.write("Модель уже распакована локально.")
         return keras.models.load_model(EXTRACTED_DIR, compile=False)
+
     # Если ZIP ещё не скачан — скачиваем
     if not os.path.exists(ZIP_TARGET):
         st.info("Скачиваю модель с Google Drive...")
@@ -39,9 +39,9 @@ def ensure_model():
     with zipfile.ZipFile(ZIP_TARGET, 'r') as z:
         z.extractall(MODEL_DIR)
 
+    # Проверяем, распаковалась ли папка с моделью
     if not os.path.isdir(EXTRACTED_DIR):
         # Иногда в ZIP папка может называться по-другому
-        # ищем любую папку с окончанием .keras
         for name in os.listdir(MODEL_DIR):
             p = os.path.join(MODEL_DIR, name)
             if os.path.isdir(p) and name.endswith(".keras"):
@@ -52,10 +52,12 @@ def ensure_model():
     return keras.models.load_model(EXTRACTED_DIR, compile=False)
 
 # --- Загружаем модель ---
-model = ensure_model()
-st.success("Модель загружена!")
-
-
+try:
+    model = ensure_model()
+    st.success("Модель загружена!")
+except Exception as e:
+    st.error(f"Не удалось загрузить модель: {e}")
+    st.stop()
 
 
 # ========== ПАРАМЕТРЫ ==========
