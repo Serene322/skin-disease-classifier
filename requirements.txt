@@ -31,6 +31,7 @@ flatbuffers==25.9.23
 fonttools==4.61.0
 fqdn==1.5.1
 gast==0.7.0
+gdown==4.7.1
 gitdb==4.0.12
 GitPython==3.1.45
 google-pasta==0.2.0
